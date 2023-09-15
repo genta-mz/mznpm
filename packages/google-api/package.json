@@ -1,0 +1,22 @@
+{
+  "name": "@mznpm/google-api",
+  "version": "0.0.1",
+  "description": "Library for use google api with Node.js",
+  "main": "index.js",
+  "repository": "git@github.com:genta-mz/mznpm.git",
+  "author": "genta",
+  "license": "MIT",
+  "files": [
+    "lib/"
+  ],
+  "scripts": {
+    "build": "npx eslint src/**/*.ts && npx tsc",
+    "publish": "yarn publish"
+  },
+  "dependencies": {
+    "googleapis": "^126.0.1"
+  },
+  "devDependencies": {
+    "googleapis": "^126.0.1"
+  }
+}
