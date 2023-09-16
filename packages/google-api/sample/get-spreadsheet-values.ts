@@ -9,7 +9,7 @@ import { GoogleAPI } from '../src';
   const spreadsheetId = process.argv[2];
   const sheetName = process.argv[3];
 
-  const values = await googleApi.spreadsheet.getValues({ spreadsheetId: spreadsheetId, range: sheetName });
+  const values = await googleApi.spreadsheet.getSheetValues({ spreadsheetId: spreadsheetId, range: sheetName });
 
   console.log(values);
 })();

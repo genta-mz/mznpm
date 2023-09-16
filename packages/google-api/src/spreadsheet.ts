@@ -8,7 +8,7 @@ export class GoogleSpreadsheetAccessor {
     this.authorizer = authorizer;
   }
 
-  public async getValues(params: { spreadsheetId: string; range?: string; ranges?: string[] }) {
+  public async getSheetValues(params: { spreadsheetId: string; range?: string; ranges?: string[] }) {
     const ranges = params.ranges || [params.range || ''];
 
     const response = await google.sheets('v4').spreadsheets.values.batchGet({
