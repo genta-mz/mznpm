@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoogleSpreadsheetAccessor = void 0;
 const googleapis_1 = require("googleapis");
+const util_1 = require("./util");
 class GoogleSpreadsheetAccessor {
     constructor(authorizer) {
         this.authorizer = authorizer;
@@ -32,6 +33,55 @@ class GoogleSpreadsheetAccessor {
                 }
                 result.set(key, item.values || []);
             });
+            return result;
+        });
+    }
+    getSheets(params) {
+        var _a, _b;
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield googleapis_1.google.sheets('v4').spreadsheets.get({
+                auth: this.authorizer.authorize(),
+                spreadsheetId: params.spreadsheetId,
+                ranges: params.ranges,
+                includeGridData: true,
+            });
+            const requestRangeInfos = ((_a = params.ranges) === null || _a === void 0 ? void 0 : _a.map((item) => new util_1.RangeInfo(item))) || [];
+            const result = new Map();
+            (_b = response.data.sheets) === null || _b === void 0 ? void 0 : _b.forEach((sheet) => {
+                var _a, _b;
+                const sheetName = ((_a = sheet.properties) === null || _a === void 0 ? void 0 : _a.title) || '';
+                (_b = sheet.data) === null || _b === void 0 ? void 0 : _b.forEach((grid) => {
+                    var _a, _b;
+                    const startColumn = (0, util_1.getAlphabetByColumn)(grid.startColumn || 0);
+                    const startRow = grid.startRow || 0;
+                    const maxLength = ((_a = grid.rowData) === null || _a === void 0 ? void 0 : _a.map((row) => { var _a; return ((_a = row.values) === null || _a === void 0 ? void 0 : _a.length) || 0; }).sort((a, b) => (a > b ? -1 : 1)).shift()) || 0;
+                    const endColumn = (0, util_1.getAlphabetByColumn)((grid.startColumn || 0) + (maxLength - 1));
+                    const endRow = ((_b = grid.rowData) === null || _b === void 0 ? void 0 : _b.length) || 0;
+                    const rangeInfo = new util_1.RangeInfo(`${sheetName}!${startColumn}${startRow + 1}:${endColumn}${endRow + 1}`);
+                    const requestedInfo = requestRangeInfos
+                        .sort((a, b) => (a.calcDistance(rangeInfo) < b.calcDistance(rangeInfo) ? -1 : 1))
+                        .shift();
+                    const key = requestedInfo ? requestedInfo.range : sheetName;
+                    const columnMetadatas = grid.columnMetadata || [];
+                    const rowMetadatas = grid.rowMetadata || [];
+                    const data = (grid.rowData || []).map((row, rowIndex) => {
+                        const rowMetadata = rowMetadatas.length ? rowMetadatas[rowIndex] : {};
+                        return (row.values || []).map((value, valueIndex) => {
+                            const colMetadata = columnMetadatas.length ? columnMetadatas[valueIndex] : {};
+                            return {
+                                cell: value,
+                                width: colMetadata.pixelSize || 100,
+                                height: rowMetadata.pixelSize || 20,
+                                visible: !(colMetadata.hiddenByFilter ||
+                                    colMetadata.hiddenByUser ||
+                                    rowMetadata.hiddenByFilter ||
+                                    rowMetadata.hiddenByUser),
+                            };
+                        }); // (row.values || []).map
+                    }); // (grid.rowData || []).map
+                    result.set(key, data);
+                }); // sheet.data?.forEach
+            }); // response.data.sheets?.forEach
             return result;
         });
     }
