@@ -15,7 +15,7 @@ class GoogleSpreadsheetAccessor {
     constructor(authorizer) {
         this.authorizer = authorizer;
     }
-    getValues(params) {
+    getSheetValues(params) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             const ranges = params.ranges || [params.range || ''];
