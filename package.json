@@ -18,8 +18,5 @@
     "prettier": "^3.0.3",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
-  },
-  "dependencies": {
-    "fs-extra": "^11.1.1"
   }
 }
