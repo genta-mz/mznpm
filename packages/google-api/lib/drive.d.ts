@@ -1,7 +1,7 @@
-import { GoogleAuthorizer } from './authorizer';
+import { GoogleAPIContext } from './internal/context';
 export declare class GoogleDriveAccessor {
-    private readonly authorizer;
-    constructor(authorizer: GoogleAuthorizer);
+    private readonly context;
+    constructor(context: GoogleAPIContext);
     upload(param: {
         folderId?: string;
         filePath: string;

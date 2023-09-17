@@ -13,17 +13,24 @@ exports.GoogleSpreadsheetAccessor = void 0;
 const googleapis_1 = require("googleapis");
 const data_util_1 = require("@mznpm/data-util");
 class GoogleSpreadsheetAccessor {
-    constructor(authorizer) {
-        this.authorizer = authorizer;
+    constructor(context) {
+        this.context = context;
     }
     getSheetValues(params) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             const ranges = params.ranges || [params.range || ''];
-            const response = yield googleapis_1.google.sheets('v4').spreadsheets.values.batchGet({
-                auth: this.authorizer.authorize(),
+            const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.values.batchGet({
+                auth: this.context.authorizer.authorize(),
                 spreadsheetId: params.spreadsheetId,
                 ranges: ranges,
+            }), (e) => {
+                var _a;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                if (((_a = e.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
+                    return false;
+                }
+                return true;
             });
             const result = new Map();
             (_a = response.data.valueRanges) === null || _a === void 0 ? void 0 : _a.forEach((item) => {
@@ -39,11 +46,18 @@ class GoogleSpreadsheetAccessor {
     getSheets(params) {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield googleapis_1.google.sheets('v4').spreadsheets.get({
-                auth: this.authorizer.authorize(),
+            const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.get({
+                auth: this.context.authorizer.authorize(),
                 spreadsheetId: params.spreadsheetId,
                 ranges: params.ranges,
                 includeGridData: true,
+            }), (e) => {
+                var _a;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                if (((_a = e.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
+                    return false;
+                }
+                return true;
             });
             const requestRangeInfos = ((_a = params.ranges) === null || _a === void 0 ? void 0 : _a.map((item) => new data_util_1.RangeInfo(item))) || [];
             const result = new Map();

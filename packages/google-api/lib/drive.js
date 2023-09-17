@@ -14,19 +14,19 @@ const googleapis_1 = require("googleapis");
 const fs_1 = require("fs");
 const path_1 = require("path");
 class GoogleDriveAccessor {
-    constructor(authorizer) {
-        this.authorizer = authorizer;
+    constructor(context) {
+        this.context = context;
     }
     upload(param) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield googleapis_1.google.drive('v3').files.create({
-                auth: this.authorizer.authorize(),
+            const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.drive('v3').files.create({
+                auth: this.context.authorizer.authorize(),
                 requestBody: {
                     parents: param.folderId ? [param.folderId] : undefined,
                     name: (0, path_1.basename)(param.filePath),
                 },
                 media: { mimeType: param.mimeType, body: (0, fs_1.createReadStream)((0, path_1.resolve)(param.filePath)) },
-            });
+            }));
             return response.data;
         });
     }
@@ -36,14 +36,14 @@ class GoogleDriveAccessor {
             let rootInfo = undefined;
             let folderId = param.folderId;
             for (const d of dirs) {
-                const response = yield googleapis_1.google.drive('v3').files.create({
-                    auth: this.authorizer.authorize(),
+                const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.drive('v3').files.create({
+                    auth: this.context.authorizer.authorize(),
                     requestBody: {
                         parents: folderId ? [folderId] : undefined,
                         name: d,
                         mimeType: 'application/vnd.google-apps.folder',
                     },
-                });
+                }));
                 folderId = response.data.id || undefined;
                 if (!rootInfo) {
                     rootInfo = { id: folderId || '', name: d };

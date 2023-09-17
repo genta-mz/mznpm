@@ -1,5 +1,5 @@
 import { sheets_v4 } from 'googleapis';
-import { GoogleAuthorizer } from './authorizer';
+import { GoogleAPIContext } from './internal/context';
 export interface CellInfo {
     cell: sheets_v4.Schema$CellData;
     width: number;
@@ -7,8 +7,8 @@ export interface CellInfo {
     visible: boolean;
 }
 export declare class GoogleSpreadsheetAccessor {
-    private readonly authorizer;
-    constructor(authorizer: GoogleAuthorizer);
+    private readonly context;
+    constructor(context: GoogleAPIContext);
     getSheetValues(params: {
         spreadsheetId: string;
         range?: string;
