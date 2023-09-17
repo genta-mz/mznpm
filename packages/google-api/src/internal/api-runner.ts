@@ -1,7 +1,6 @@
 export interface ErrorConfig {
   useExponentialBackoff?: boolean;
   retryCount?: number;
-  logError?: boolean;
 }
 
 export class APIRunner {
