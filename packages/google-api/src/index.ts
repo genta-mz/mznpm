@@ -1,20 +1,28 @@
 import { GoogleAuthorizer } from './authorizer';
 import { GoogleDriveAccessor } from './drive';
+import { APIRunner, ErrorConfig } from './internal/api-runner';
+import { GoogleAPIContext } from './internal/context';
 import { GoogleSpreadsheetAccessor } from './spreadsheet';
 
 export class GoogleAPI {
   public readonly spreadsheet: GoogleSpreadsheetAccessor;
   public readonly drive: GoogleDriveAccessor;
+
   private readonly authorizer: GoogleAuthorizer;
 
-  constructor(org: string, rootDir?: string) {
+  constructor(org: string, options?: { rootDir?: string; errorConfig?: ErrorConfig }) {
     this.authorizer = new GoogleAuthorizer(
       org,
-      rootDir || `${process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME']}`
+      options?.rootDir || `${process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME']}`
     );
 
-    this.spreadsheet = new GoogleSpreadsheetAccessor(this.authorizer);
-    this.drive = new GoogleDriveAccessor(this.authorizer);
+    const context: GoogleAPIContext = {
+      authorizer: this.authorizer,
+      apiRunner: new APIRunner(options?.errorConfig),
+    };
+
+    this.spreadsheet = new GoogleSpreadsheetAccessor(context);
+    this.drive = new GoogleDriveAccessor(context);
   }
 
   public installOAuth2Token(clientSecretPath: string) {

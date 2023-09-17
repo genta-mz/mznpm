@@ -1,6 +1,6 @@
 import { google, sheets_v4 } from 'googleapis';
-import { GoogleAuthorizer } from './authorizer';
 import { getAlphabetByColumn, RangeInfo } from '@mznpm/data-util';
+import { GoogleAPIContext } from './internal/context';
 
 export interface CellInfo {
   cell: sheets_v4.Schema$CellData;
@@ -10,20 +10,31 @@ export interface CellInfo {
 }
 
 export class GoogleSpreadsheetAccessor {
-  private readonly authorizer: GoogleAuthorizer;
+  private readonly context: GoogleAPIContext;
 
-  constructor(authorizer: GoogleAuthorizer) {
-    this.authorizer = authorizer;
+  constructor(context: GoogleAPIContext) {
+    this.context = context;
   }
 
   public async getSheetValues(params: { spreadsheetId: string; range?: string; ranges?: string[] }) {
     const ranges = params.ranges || [params.range || ''];
 
-    const response = await google.sheets('v4').spreadsheets.values.batchGet({
-      auth: this.authorizer.authorize(),
-      spreadsheetId: params.spreadsheetId,
-      ranges: ranges,
-    });
+    const response = await this.context.apiRunner.withRetry(
+      () =>
+        google.sheets('v4').spreadsheets.values.batchGet({
+          auth: this.context.authorizer.authorize(),
+          spreadsheetId: params.spreadsheetId,
+          ranges: ranges,
+        }),
+      (e) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((e as any).response?.status === 404) {
+          return false;
+        }
+
+        return true;
+      }
+    );
 
     const result = new Map<string, string[][]>();
     response.data.valueRanges?.forEach((item) => {
@@ -40,12 +51,23 @@ export class GoogleSpreadsheetAccessor {
   }
 
   public async getSheets(params: { spreadsheetId: string; ranges?: string[] }) {
-    const response = await google.sheets('v4').spreadsheets.get({
-      auth: this.authorizer.authorize(),
-      spreadsheetId: params.spreadsheetId,
-      ranges: params.ranges,
-      includeGridData: true,
-    });
+    const response = await this.context.apiRunner.withRetry(
+      () =>
+        google.sheets('v4').spreadsheets.get({
+          auth: this.context.authorizer.authorize(),
+          spreadsheetId: params.spreadsheetId,
+          ranges: params.ranges,
+          includeGridData: true,
+        }),
+      (e) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((e as any).response?.status === 404) {
+          return false;
+        }
+
+        return true;
+      }
+    );
 
     const requestRangeInfos = params.ranges?.map((item) => new RangeInfo(item)) || [];
     const result = new Map<string, CellInfo[][]>();

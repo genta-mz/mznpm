@@ -6,8 +6,8 @@ import { GoogleAPI } from '../src';
 (async () => {
   const googleApi = new GoogleAPI('mznpm-sample');
   const res = await googleApi.drive.upload({
-    folderId: '1kPE-1tPPiU8LSSaL35gpb8_1AMU0O0pt',
-    filePath: process.argv[2],
+    folderId: process.argv[2],
+    filePath: process.argv[3],
     mimeType: '	text/plain',
   });
 

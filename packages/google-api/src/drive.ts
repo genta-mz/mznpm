@@ -1,24 +1,26 @@
 import { google } from 'googleapis';
-import { GoogleAuthorizer } from './authorizer';
 import { createReadStream } from 'fs';
 import { basename, resolve, sep } from 'path';
+import { GoogleAPIContext } from './internal/context';
 
 export class GoogleDriveAccessor {
-  private readonly authorizer: GoogleAuthorizer;
+  private readonly context: GoogleAPIContext;
 
-  constructor(authorizer: GoogleAuthorizer) {
-    this.authorizer = authorizer;
+  constructor(context: GoogleAPIContext) {
+    this.context = context;
   }
 
   public async upload(param: { folderId?: string; filePath: string; mimeType: string }) {
-    const response = await google.drive('v3').files.create({
-      auth: this.authorizer.authorize(),
-      requestBody: {
-        parents: param.folderId ? [param.folderId] : undefined,
-        name: basename(param.filePath),
-      },
-      media: { mimeType: param.mimeType, body: createReadStream(resolve(param.filePath)) },
-    });
+    const response = await this.context.apiRunner.withRetry(() =>
+      google.drive('v3').files.create({
+        auth: this.context.authorizer.authorize(),
+        requestBody: {
+          parents: param.folderId ? [param.folderId] : undefined,
+          name: basename(param.filePath),
+        },
+        media: { mimeType: param.mimeType, body: createReadStream(resolve(param.filePath)) },
+      })
+    );
 
     return response.data;
   }
@@ -29,14 +31,16 @@ export class GoogleDriveAccessor {
     let rootInfo: { id: string; name: string } | undefined = undefined;
     let folderId = param.folderId;
     for (const d of dirs) {
-      const response = await google.drive('v3').files.create({
-        auth: this.authorizer.authorize(),
-        requestBody: {
-          parents: folderId ? [folderId] : undefined,
-          name: d,
-          mimeType: 'application/vnd.google-apps.folder',
-        },
-      });
+      const response = await this.context.apiRunner.withRetry(() =>
+        google.drive('v3').files.create({
+          auth: this.context.authorizer.authorize(),
+          requestBody: {
+            parents: folderId ? [folderId] : undefined,
+            name: d,
+            mimeType: 'application/vnd.google-apps.folder',
+          },
+        })
+      );
 
       folderId = response.data.id || undefined;
       if (!rootInfo) {
