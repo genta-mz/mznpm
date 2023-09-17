@@ -1,6 +1,6 @@
 import { google, sheets_v4 } from 'googleapis';
 import { GoogleAuthorizer } from './authorizer';
-import { getAlphabetByColumn, RangeInfo } from './util';
+import { getAlphabetByColumn, RangeInfo } from '@mznpm/data-util';
 
 export interface CellInfo {
   cell: sheets_v4.Schema$CellData;
