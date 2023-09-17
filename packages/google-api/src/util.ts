@@ -9,6 +9,15 @@ export const getAlphabetByColumn = (column: number) => {
   return prefix + String.fromCharCode(0x41 + (column % ALPHABET_COUNT));
 };
 
+export const getColumnByAlphabet = (str: string) => {
+  let col = 0;
+  for (let i = 0; i < str.length; ++i) {
+    col += Math.pow(26, str.length - 1 - i) * (str.charCodeAt(i) - 0x40);
+  }
+
+  return col - 1;
+};
+
 export const parseAddressStr = (str: string) => {
   if (!/^[A-Z]+[0-9]*$/.test(str)) {
     return {};
@@ -41,34 +50,38 @@ export class RangeInfo {
     {
       const info = parseAddressStr(addressPair.length >= 1 ? addressPair[0] : '');
       this.startColumn = info.column || 'A';
-      this.startRow = info.row || 0;
+      this.startRow = (info.row || 1) - 1;
     }
     {
-      const info = parseAddressStr(addressPair.length >= 2 ? addressPair[1] : '');
+      const info = parseAddressStr(
+        addressPair.length >= 2 ? addressPair[1] : `${this.startColumn}${this.startRow + 1}`
+      );
       this.endColumn = info.column || 'Z';
-      this.endRow = info.row || 1000;
+      this.endRow = (info.row || 1000) - 1;
     }
   }
 
   public calcDistance(other: RangeInfo) {
-    let d = 0;
-
     if (this.name !== other.name) {
-      d += 10000;
-    }
-    if (this.startColumn != other.startColumn) {
-      d += 1000;
-    }
-    if (this.endColumn != other.endColumn) {
-      d += 100;
-    }
-    if (this.startRow != other.startRow) {
-      d += 10;
-    }
-    if (this.endRow != other.endRow) {
-      d += 1;
+      return Number.MAX_SAFE_INTEGER;
     }
 
-    return d;
+    const f = (posA: { x: number; y: number }, posB: { x: number; y: number }) => {
+      const dx = Math.abs(posB.x - posA.x);
+      const dy = Math.abs(posB.y - posA.y);
+
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    return (
+      f(
+        { x: getColumnByAlphabet(this.endColumn), y: this.endRow },
+        { x: getColumnByAlphabet(other.endColumn), y: other.endRow }
+      ) *
+      f(
+        { x: getColumnByAlphabet(this.startColumn), y: this.startRow },
+        { x: getColumnByAlphabet(other.startColumn), y: other.startRow }
+      )
+    );
   }
 }
