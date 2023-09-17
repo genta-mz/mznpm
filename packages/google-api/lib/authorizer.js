@@ -32,7 +32,7 @@ class GoogleAuthorizer {
         const client = new googleapis_1.google.auth.OAuth2(`${clientSecret.installed.client_id}`, `${clientSecret.installed.client_secret}`, 'http://localhost:3000');
         const authUrl = client.generateAuthUrl({
             access_type: 'offline',
-            scope: ['https://www.googleapis.com/auth/spreadsheets'],
+            scope: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
         });
         console.log(authUrl);
         const server = (0, http_1.createServer)((req, res) => __awaiter(this, void 0, void 0, function* () {
