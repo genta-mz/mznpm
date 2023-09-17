@@ -1,0 +1,17 @@
+{
+  "name": "@mznpm/data-util",
+  "version": "1.0.0",
+  "description": "Utility library for data access and text process.",
+  "main": "lib/index.js",
+  "repository": "git@github.com:genta-mz/mznpm.git",
+  "author": "genta",
+  "license": "MIT",
+  "private": false,
+    "files": [
+    "lib/"
+  ],
+  "scripts": {
+    "build": "npx eslint src/**/*.ts && npx tsc",
+    "test": "npx jest tests/**/*.test.ts"
+  }
+}
