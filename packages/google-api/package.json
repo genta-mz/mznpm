@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build": "npx eslint src/**/*.ts && npx tsc",
-    "publish": "yarn publish"
+    "test": "npx jest tests/**/*.test.ts"
   },
   "dependencies": {
     "fs-extra": "^11.1.1",
