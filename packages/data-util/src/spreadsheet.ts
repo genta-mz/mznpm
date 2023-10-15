@@ -2,8 +2,8 @@ const ALPHABET_COUNT = 26;
 
 export const getAlphabetByColumn = (column: number) => {
   let prefix = '';
-  if (column >= 26) {
-    prefix += getAlphabetByColumn((column - 26 - (column % ALPHABET_COUNT)) / ALPHABET_COUNT);
+  if (column >= ALPHABET_COUNT) {
+    prefix += getAlphabetByColumn((column - ALPHABET_COUNT - (column % ALPHABET_COUNT)) / ALPHABET_COUNT);
   }
 
   return prefix + String.fromCharCode(0x41 + (column % ALPHABET_COUNT));
@@ -12,7 +12,7 @@ export const getAlphabetByColumn = (column: number) => {
 export const getColumnByAlphabet = (str: string) => {
   let col = 0;
   for (let i = 0; i < str.length; ++i) {
-    col += Math.pow(26, str.length - 1 - i) * (str.charCodeAt(i) - 0x40);
+    col += Math.pow(ALPHABET_COUNT, str.length - 1 - i) * (str.charCodeAt(i) - 0x40);
   }
 
   return col - 1;
