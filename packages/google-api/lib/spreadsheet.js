@@ -9,12 +9,71 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GoogleSpreadsheetAccessor = void 0;
+exports.GoogleSpreadsheetAccessor = exports.CellData = void 0;
 const googleapis_1 = require("googleapis");
 const data_util_1 = require("@mznpm/data-util");
+const util_1 = require("./internal/util");
+class CellData {
+    constructor(v) {
+        this.data = {};
+        this.setValue(v || '');
+    }
+    setValue(v) {
+        if (typeof v === 'string') {
+            this.data.userEnteredValue = { stringValue: `${v}` };
+        }
+        else if (typeof v == 'number') {
+            this.data.userEnteredValue = { numberValue: Number(v) };
+        }
+        else if (typeof v === 'boolean') {
+            this.data.userEnteredValue = { boolValue: !!v };
+        }
+        return this;
+    }
+    setBackgroundColor(code) {
+        return this.setFormat({
+            backgroundColor: (0, util_1.code2Color)(code),
+        });
+    }
+    setFontColor(code) {
+        var _a;
+        return this.setFormat({
+            textFormat: Object.assign(Object.assign({}, (((_a = this.data.userEnteredFormat) === null || _a === void 0 ? void 0 : _a.textFormat) || {})), {
+                foregroundColor: (0, util_1.code2Color)(code),
+            }),
+        });
+    }
+    setFontBold(bold = true) {
+        var _a;
+        return this.setFormat({
+            textFormat: Object.assign(Object.assign({}, (((_a = this.data.userEnteredFormat) === null || _a === void 0 ? void 0 : _a.textFormat) || {})), {
+                bold: bold,
+            }),
+        });
+    }
+    setFontItalic(italic = true) {
+        var _a;
+        return this.setFormat({
+            textFormat: Object.assign(Object.assign({}, (((_a = this.data.userEnteredFormat) === null || _a === void 0 ? void 0 : _a.textFormat) || {})), {
+                italic: italic,
+            }),
+        });
+    }
+    setFormat(param) {
+        this.data.userEnteredFormat = Object.assign(Object.assign({}, (this.data.userEnteredFormat || {})), param);
+        return this;
+    }
+    exporse() {
+        return this.data;
+    }
+}
+exports.CellData = CellData;
 class GoogleSpreadsheetAccessor {
     constructor(context) {
         this.context = context;
+        this.spreadsheetContext = {
+            sheetIdMap: new Map(),
+        };
     }
     getSheetValues(params) {
         var _a;
@@ -97,6 +156,128 @@ class GoogleSpreadsheetAccessor {
                 }); // sheet.data?.forEach
             }); // response.data.sheets?.forEach
             return result;
+        });
+    }
+    updateValues(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const requests = [];
+            yield Promise.all(params.requests.map((item) => __awaiter(this, void 0, void 0, function* () {
+                var _a, _b;
+                const rangeInfo = new data_util_1.RangeInfo(item.range || '');
+                const sheetId = item.sheetId
+                    ? item.sheetId
+                    : yield this.getSheetIdByName({ spreadsheetId: params.spreadsheetId, sheetName: rangeInfo.name });
+                if (item.properties) {
+                    requests.push({
+                        updateSheetProperties: {
+                            fields: Object.keys(item.properties)
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                .filter((k) => item.properties[k] !== undefined)
+                                .join(','),
+                            properties: Object.assign({
+                                sheetId: sheetId,
+                            }, item.properties),
+                        },
+                    });
+                }
+                if (item.rows) {
+                    const maxCol = ((_a = item.rows) === null || _a === void 0 ? void 0 : _a.map((row) => row.length).sort((a, b) => (a > b ? -1 : 1)).shift()) || 1;
+                    const startCol = (0, data_util_1.getColumnByAlphabet)(rangeInfo.startColumn);
+                    const startRow = rangeInfo.startRow;
+                    const endCol = startCol + maxCol;
+                    const endRow = startRow + (((_b = item.rows) === null || _b === void 0 ? void 0 : _b.length) || 1);
+                    requests.push({
+                        updateCells: (() => {
+                            if (!item.rows) {
+                                return undefined;
+                            }
+                            return {
+                                fields: '*',
+                                range: {
+                                    sheetId: sheetId,
+                                    startColumnIndex: startCol,
+                                    startRowIndex: startRow,
+                                    endColumnIndex: endCol,
+                                    endRowIndex: endRow,
+                                },
+                                rows: item.rows.map((row) => ({
+                                    values: row.map((value) => {
+                                        if (value instanceof CellData) {
+                                            return value.exporse();
+                                        }
+                                        return new CellData(value).exporse();
+                                    }),
+                                })),
+                            };
+                        })(),
+                    });
+                }
+            })));
+            yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.batchUpdate({
+                auth: this.context.authorizer.authorize(),
+                spreadsheetId: params.spreadsheetId,
+                requestBody: { requests: requests },
+            }), (e) => {
+                var _a;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                if (((_a = e.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
+                    return false;
+                }
+                return true;
+            });
+        });
+    }
+    setSheetProperties(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const updateRequests = yield Promise.all(params.requests.map((item) => __awaiter(this, void 0, void 0, function* () {
+                const sheetId = item.sheetId
+                    ? item.sheetId
+                    : yield this.getSheetIdByName({ spreadsheetId: params.spreadsheetId, sheetName: item.sheetName || '' });
+                return {
+                    sheetId: sheetId,
+                    properties: item.properties,
+                };
+            })));
+            return this.updateValues({
+                spreadsheetId: params.spreadsheetId,
+                requests: updateRequests,
+            });
+        });
+    }
+    getSheetIdByName(params) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.spreadsheetContext.sheetIdMap.has(params.spreadsheetId)) {
+                const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.get({
+                    auth: this.context.authorizer.authorize(),
+                    spreadsheetId: params.spreadsheetId,
+                    includeGridData: false,
+                }), (e) => {
+                    var _a;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    if (((_a = e.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
+                        return false;
+                    }
+                    return true;
+                });
+                const entries = (_a = response.data.sheets) === null || _a === void 0 ? void 0 : _a.map((item) => {
+                    var _a, _b;
+                    return [
+                        (_a = item.properties) === null || _a === void 0 ? void 0 : _a.title,
+                        (_b = item.properties) === null || _b === void 0 ? void 0 : _b.sheetId,
+                    ];
+                }).filter((pair) => pair[0] !== undefined && pair[0] !== null && pair[1] !== undefined && pair[1] !== null).map((pair) => [`${pair[0]}`, pair[1] || 0]);
+                this.spreadsheetContext.sheetIdMap.set(params.spreadsheetId, new Map(entries || []));
+            }
+            const map = this.spreadsheetContext.sheetIdMap.get(params.spreadsheetId);
+            if (!map) {
+                throw new Error(`getSheetIdByName: spreadsheetId not found. ${params.spreadsheetId}`);
+            }
+            const sheetId = map.get(params.sheetName);
+            if (!map) {
+                throw new Error(`getSheetIdByName: sheetName not found. ${params.sheetName} @ ${params.spreadsheetId}`);
+            }
+            return sheetId;
         });
     }
 }
