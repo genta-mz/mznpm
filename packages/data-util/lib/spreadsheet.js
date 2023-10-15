@@ -4,8 +4,8 @@ exports.RangeInfo = exports.parseAddressStr = exports.getColumnByAlphabet = expo
 const ALPHABET_COUNT = 26;
 const getAlphabetByColumn = (column) => {
     let prefix = '';
-    if (column >= 26) {
-        prefix += (0, exports.getAlphabetByColumn)((column - 26 - (column % ALPHABET_COUNT)) / ALPHABET_COUNT);
+    if (column >= ALPHABET_COUNT) {
+        prefix += (0, exports.getAlphabetByColumn)((column - ALPHABET_COUNT - (column % ALPHABET_COUNT)) / ALPHABET_COUNT);
     }
     return prefix + String.fromCharCode(0x41 + (column % ALPHABET_COUNT));
 };
@@ -13,7 +13,7 @@ exports.getAlphabetByColumn = getAlphabetByColumn;
 const getColumnByAlphabet = (str) => {
     let col = 0;
     for (let i = 0; i < str.length; ++i) {
-        col += Math.pow(26, str.length - 1 - i) * (str.charCodeAt(i) - 0x40);
+        col += Math.pow(ALPHABET_COUNT, str.length - 1 - i) * (str.charCodeAt(i) - 0x40);
     }
     return col - 1;
 };
