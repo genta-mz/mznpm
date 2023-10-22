@@ -28,7 +28,7 @@ export class GoogleAuthorizer {
     return client;
   }
 
-  public saveToken(clientSecretPath: string) {
+  public saveToken(clientSecretPath: string, onAuthorize: (url: string) => void) {
     const clientSecret = readJSONSync(resolve(clientSecretPath));
     const client = new google.auth.OAuth2(
       `${clientSecret.installed.client_id}`,
@@ -41,7 +41,7 @@ export class GoogleAuthorizer {
       scope: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
     });
 
-    console.log(authUrl);
+    onAuthorize(authUrl);
 
     const server = createServer(async (req, res) => {
       try {

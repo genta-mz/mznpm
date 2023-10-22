@@ -25,7 +25,7 @@ export class GoogleAPI {
     this.drive = new GoogleDriveAccessor(context);
   }
 
-  public installOAuth2Token(clientSecretPath: string) {
-    this.authorizer.saveToken(clientSecretPath);
+  public installOAuth2Token(clientSecretPath: string, onAuthorize: (url: string) => void) {
+    this.authorizer.saveToken(clientSecretPath, onAuthorize);
   }
 }

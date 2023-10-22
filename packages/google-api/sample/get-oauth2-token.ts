@@ -5,5 +5,7 @@ import { GoogleAPI } from '../src';
 
 (async () => {
   const googleApi = new GoogleAPI('mznpm-sample');
-  googleApi.installOAuth2Token(process.argv[2]);
+  googleApi.installOAuth2Token(process.argv[2], (url: string) => {
+    console.log(url);
+  });
 })();
