@@ -27,14 +27,14 @@ class GoogleAuthorizer {
         client.credentials = tokens;
         return client;
     }
-    saveToken(clientSecretPath) {
+    saveToken(clientSecretPath, onAuthorize) {
         const clientSecret = (0, fs_extra_1.readJSONSync)((0, path_1.resolve)(clientSecretPath));
         const client = new googleapis_1.google.auth.OAuth2(`${clientSecret.installed.client_id}`, `${clientSecret.installed.client_secret}`, 'http://localhost:3000');
         const authUrl = client.generateAuthUrl({
             access_type: 'offline',
             scope: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
         });
-        console.log(authUrl);
+        onAuthorize(authUrl);
         const server = (0, http_1.createServer)((req, res) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const qs = new url_1.URL(req.url || '', 'http://localhost:3000').searchParams;

@@ -15,8 +15,8 @@ class GoogleAPI {
         this.spreadsheet = new spreadsheet_1.GoogleSpreadsheetAccessor(context);
         this.drive = new drive_1.GoogleDriveAccessor(context);
     }
-    installOAuth2Token(clientSecretPath) {
-        this.authorizer.saveToken(clientSecretPath);
+    installOAuth2Token(clientSecretPath, onAuthorize) {
+        this.authorizer.saveToken(clientSecretPath, onAuthorize);
     }
 }
 exports.GoogleAPI = GoogleAPI;

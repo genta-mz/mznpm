@@ -9,5 +9,5 @@ export declare class GoogleAPI {
         rootDir?: string;
         errorConfig?: ErrorConfig;
     });
-    installOAuth2Token(clientSecretPath: string): void;
+    installOAuth2Token(clientSecretPath: string, onAuthorize: (url: string) => void): void;
 }
