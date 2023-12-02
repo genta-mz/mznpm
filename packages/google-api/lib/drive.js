@@ -9,10 +9,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GoogleDriveAccessor = void 0;
+exports.GoogleDriveAccessor = exports.DriveItem = exports.DriveItemType = void 0;
 const googleapis_1 = require("googleapis");
 const fs_1 = require("fs");
 const path_1 = require("path");
+var DriveItemType;
+(function (DriveItemType) {
+    DriveItemType[DriveItemType["File"] = 0] = "File";
+    DriveItemType[DriveItemType["Folder"] = 1] = "Folder";
+})(DriveItemType || (exports.DriveItemType = DriveItemType = {}));
+class DriveItem {
+    constructor(file) {
+        this.type = (() => {
+            if (file.mimeType == 'application/vnd.google-apps.folder') {
+                return DriveItemType.Folder;
+            }
+            return DriveItemType.File;
+        })();
+        this.mimetype = file.mimeType || undefined;
+        this.id = file.id || undefined;
+        this.name = file.name || undefined;
+        this.resourceKey = file.resourceKey || undefined;
+    }
+}
+exports.DriveItem = DriveItem;
 class GoogleDriveAccessor {
     constructor(context) {
         this.context = context;
@@ -50,6 +70,12 @@ class GoogleDriveAccessor {
                 }
             }
             return rootInfo;
+        });
+    }
+    list(param) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.drive('v3').files.list({ auth: this.context.authorizer.authorize(), q: `'${param.folderId}' in parents` }));
+            return (response.data.files || []).map((f) => new DriveItem(f));
         });
     }
 }

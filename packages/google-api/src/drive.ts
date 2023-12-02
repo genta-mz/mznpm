@@ -1,7 +1,35 @@
-import { google } from 'googleapis';
+import { google, drive_v3 } from 'googleapis';
 import { createReadStream } from 'fs';
 import { basename, resolve, sep } from 'path';
 import { GoogleAPIContext } from './internal/context';
+
+export enum DriveItemType {
+  File,
+  Folder,
+}
+
+export class DriveItem {
+  public readonly type: DriveItemType;
+  public readonly mimetype?: string;
+  public readonly id?: string;
+  public readonly name?: string;
+  public readonly resourceKey?: string;
+
+  constructor(file: drive_v3.Schema$File) {
+    this.type = (() => {
+      if (file.mimeType == 'application/vnd.google-apps.folder') {
+        return DriveItemType.Folder;
+      }
+
+      return DriveItemType.File;
+    })();
+
+    this.mimetype = file.mimeType || undefined;
+    this.id = file.id || undefined;
+    this.name = file.name || undefined;
+    this.resourceKey = file.resourceKey || undefined;
+  }
+}
 
 export class GoogleDriveAccessor {
   private readonly context: GoogleAPIContext;
@@ -49,5 +77,13 @@ export class GoogleDriveAccessor {
     }
 
     return rootInfo;
+  }
+
+  public async list(param: { folderId?: string }) {
+    const response = await this.context.apiRunner.withRetry(() =>
+      google.drive('v3').files.list({ auth: this.context.authorizer.authorize(), q: `'${param.folderId}' in parents` })
+    );
+
+    return (response.data.files || []).map((f) => new DriveItem(f));
   }
 }
