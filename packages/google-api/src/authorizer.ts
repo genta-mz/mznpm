@@ -1,10 +1,11 @@
-import { mkdirpSync, readJSONSync, writeJSONSync } from 'fs-extra';
+import { mkdirpSync, readFileSync, readJSONSync, writeFileSync, writeJSONSync } from 'fs-extra';
 import { google, Auth } from 'googleapis';
 import { createServer } from 'http';
 import { join, resolve } from 'path';
 import { URL } from 'url';
 
 const TOKEN_DIR_NAME = '.mznode';
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'];
 
 interface IAuthClientHandler {
   createClient(): Auth.OAuth2Client | Auth.GoogleAuth;
@@ -42,7 +43,7 @@ export class OAuth2ClientHandler implements IAuthClientHandler {
 
     const authUrl = client.generateAuthUrl({
       access_type: 'offline',
-      scope: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
+      scope: SCOPES,
     });
 
     onAuthorize(authUrl);
@@ -86,24 +87,57 @@ export class OAuth2ClientHandler implements IAuthClientHandler {
   }
 }
 
+export type GoogleAuthKeyInfo = { filePath?: string; key?: string };
+
+class GoogleAuthClientHandler implements IAuthClientHandler {
+  private readonly keyDir: string;
+
+  constructor(org: string, rootDir: string) {
+    this.keyDir = join(rootDir, TOKEN_DIR_NAME, org);
+  }
+
+  public createClient() {
+    const client = new Auth.GoogleAuth({
+      keyFile: join(this.keyDir, 'service-account-key.json'),
+      scopes: SCOPES,
+    });
+
+    return client;
+  }
+
+  public installKey(param: GoogleAuthKeyInfo) {
+    const buffer = param.key || (param.filePath && readFileSync(resolve(param.filePath)));
+    if (!buffer) {
+      throw new Error(`Invalid Key: ${JSON.stringify(param)}`);
+    }
+
+    writeFileSync(join(this.keyDir, 'service-account-key.json'), buffer, { encoding: 'utf-8' });
+  }
+}
+
 export enum GoogleAuthType {
   OAuth2,
   GoogleAuth,
 }
 
 export class GoogleAuthorizer {
-  private readonly type: GoogleAuthType;
   public readonly oAuth2: OAuth2ClientHandler;
+  public readonly googleAuth: GoogleAuthClientHandler;
+
+  private readonly type: GoogleAuthType;
 
   constructor(type: GoogleAuthType, org: string, rootDir: string) {
     this.type = type;
     this.oAuth2 = new OAuth2ClientHandler(org, rootDir);
+    this.googleAuth = new GoogleAuthClientHandler(org, rootDir);
   }
 
   public authorize() {
     switch (this.type) {
       case GoogleAuthType.OAuth2:
         return this.oAuth2.createClient();
+      case GoogleAuthType.GoogleAuth:
+        return this.googleAuth.createClient();
     }
 
     throw new Error(`Unhandled Auth Type ${this.type}`);
