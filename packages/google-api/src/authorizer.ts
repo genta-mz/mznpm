@@ -1,19 +1,23 @@
 import { mkdirpSync, readJSONSync, writeJSONSync } from 'fs-extra';
-import { google } from 'googleapis';
+import { google, Auth } from 'googleapis';
 import { createServer } from 'http';
 import { join, resolve } from 'path';
 import { URL } from 'url';
 
 const TOKEN_DIR_NAME = '.mznode';
 
-export class GoogleAuthorizer {
+interface IAuthClientHandler {
+  createClient(): Auth.OAuth2Client | Auth.GoogleAuth;
+}
+
+export class OAuth2ClientHandler implements IAuthClientHandler {
   private readonly tokenDir: string;
 
   constructor(org: string, rootDir: string) {
     this.tokenDir = join(rootDir, TOKEN_DIR_NAME, org);
   }
 
-  public authorize() {
+  public createClient() {
     const clientSecret = readJSONSync(join(this.tokenDir, 'client-secret.json'), { encoding: 'utf-8' });
     const tokens = readJSONSync(join(this.tokenDir, 'tokens.json'), { encoding: 'utf-8' });
 
@@ -28,7 +32,7 @@ export class GoogleAuthorizer {
     return client;
   }
 
-  public saveToken(clientSecretPath: string, onAuthorize: (url: string) => void) {
+  public getToken(clientSecretPath: string, onAuthorize: (url: string) => void) {
     const clientSecret = readJSONSync(resolve(clientSecretPath));
     const client = new google.auth.OAuth2(
       `${clientSecret.installed.client_id}`,
@@ -79,5 +83,29 @@ export class GoogleAuthorizer {
     });
 
     server.listen(3000);
+  }
+}
+
+export enum GoogleAuthType {
+  OAuth2,
+  GoogleAuth,
+}
+
+export class GoogleAuthorizer {
+  private readonly type: GoogleAuthType;
+  public readonly oAuth2: OAuth2ClientHandler;
+
+  constructor(type: GoogleAuthType, org: string, rootDir: string) {
+    this.type = type;
+    this.oAuth2 = new OAuth2ClientHandler(org, rootDir);
+  }
+
+  public authorize() {
+    switch (this.type) {
+      case GoogleAuthType.OAuth2:
+        return this.oAuth2.createClient();
+    }
+
+    throw new Error(`Unhandled Auth Type ${this.type}`);
   }
 }
