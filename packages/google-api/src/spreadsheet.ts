@@ -101,7 +101,7 @@ export class GoogleSpreadsheetAccessor {
     const response = await this.context.apiRunner.withRetry(
       () =>
         google.sheets('v4').spreadsheets.values.batchGet({
-          auth: this.context.authorizer.authorize(),
+          auth: this.context.authorizer.createClient(),
           spreadsheetId: params.spreadsheetId,
           ranges: ranges,
         }),
@@ -133,7 +133,7 @@ export class GoogleSpreadsheetAccessor {
     const response = await this.context.apiRunner.withRetry(
       () =>
         google.sheets('v4').spreadsheets.get({
-          auth: this.context.authorizer.authorize(),
+          auth: this.context.authorizer.createClient(),
           spreadsheetId: params.spreadsheetId,
           ranges: params.ranges,
           includeGridData: true,
@@ -281,7 +281,7 @@ export class GoogleSpreadsheetAccessor {
     await this.context.apiRunner.withRetry(
       () =>
         google.sheets('v4').spreadsheets.batchUpdate({
-          auth: this.context.authorizer.authorize(),
+          auth: this.context.authorizer.createClient(),
           spreadsheetId: params.spreadsheetId,
           requestBody: { requests: requests },
         }),
@@ -324,7 +324,7 @@ export class GoogleSpreadsheetAccessor {
       const response = await this.context.apiRunner.withRetry(
         () =>
           google.sheets('v4').spreadsheets.get({
-            auth: this.context.authorizer.authorize(),
+            auth: this.context.authorizer.createClient(),
             spreadsheetId: params.spreadsheetId,
             includeGridData: false,
           }),

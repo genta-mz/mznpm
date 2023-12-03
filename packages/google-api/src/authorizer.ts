@@ -7,11 +7,11 @@ import { URL } from 'url';
 const TOKEN_DIR_NAME = '.mznode';
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'];
 
-interface IAuthClientHandler {
+interface IAuthClient {
   createClient(): Auth.OAuth2Client | Auth.GoogleAuth;
 }
 
-export class OAuth2ClientHandler implements IAuthClientHandler {
+export class OAuth2ClientHandler {
   private readonly tokenDir: string;
 
   constructor(org: string, rootDir: string) {
@@ -89,7 +89,7 @@ export class OAuth2ClientHandler implements IAuthClientHandler {
 
 export type GoogleAuthKeyInfo = { filePath?: string; key?: string };
 
-class GoogleAuthClientHandler implements IAuthClientHandler {
+class GoogleAuthClientHandler {
   private readonly keyDir: string;
 
   constructor(org: string, rootDir: string) {
@@ -120,7 +120,7 @@ export enum GoogleAuthType {
   GoogleAuth,
 }
 
-export class GoogleAuthorizer {
+export class GoogleAuthorizer implements IAuthClient {
   public readonly oAuth2: OAuth2ClientHandler;
   public readonly googleAuth: GoogleAuthClientHandler;
 
@@ -132,7 +132,7 @@ export class GoogleAuthorizer {
     this.googleAuth = new GoogleAuthClientHandler(org, rootDir);
   }
 
-  public authorize() {
+  public createClient() {
     switch (this.type) {
       case GoogleAuthType.OAuth2:
         return this.oAuth2.createClient();
