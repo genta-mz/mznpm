@@ -9,30 +9,31 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GoogleAuthorizer = void 0;
+exports.GoogleAuthorizer = exports.GoogleAuthType = exports.OAuth2ClientHandler = void 0;
 const fs_extra_1 = require("fs-extra");
 const googleapis_1 = require("googleapis");
 const http_1 = require("http");
 const path_1 = require("path");
 const url_1 = require("url");
 const TOKEN_DIR_NAME = '.mznode';
-class GoogleAuthorizer {
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'];
+class OAuth2ClientHandler {
     constructor(org, rootDir) {
         this.tokenDir = (0, path_1.join)(rootDir, TOKEN_DIR_NAME, org);
     }
-    authorize() {
+    createClient() {
         const clientSecret = (0, fs_extra_1.readJSONSync)((0, path_1.join)(this.tokenDir, 'client-secret.json'), { encoding: 'utf-8' });
         const tokens = (0, fs_extra_1.readJSONSync)((0, path_1.join)(this.tokenDir, 'tokens.json'), { encoding: 'utf-8' });
         const client = new googleapis_1.google.auth.OAuth2(`${clientSecret.client_id}`, `${clientSecret.client_secret}`, 'http://localhost:3000');
         client.credentials = tokens;
         return client;
     }
-    saveToken(clientSecretPath, onAuthorize) {
+    getToken(clientSecretPath, onAuthorize) {
         const clientSecret = (0, fs_extra_1.readJSONSync)((0, path_1.resolve)(clientSecretPath));
         const client = new googleapis_1.google.auth.OAuth2(`${clientSecret.installed.client_id}`, `${clientSecret.installed.client_secret}`, 'http://localhost:3000');
         const authUrl = client.generateAuthUrl({
             access_type: 'offline',
-            scope: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
+            scope: SCOPES,
         });
         onAuthorize(authUrl);
         const server = (0, http_1.createServer)((req, res) => __awaiter(this, void 0, void 0, function* () {
@@ -64,6 +65,47 @@ class GoogleAuthorizer {
             process.exit(0);
         }));
         server.listen(3000);
+    }
+}
+exports.OAuth2ClientHandler = OAuth2ClientHandler;
+class GoogleAuthClientHandler {
+    constructor(org, rootDir) {
+        this.keyDir = (0, path_1.join)(rootDir, TOKEN_DIR_NAME, org);
+    }
+    createClient() {
+        const client = new googleapis_1.Auth.GoogleAuth({
+            keyFile: (0, path_1.join)(this.keyDir, 'service-account-key.json'),
+            scopes: SCOPES,
+        });
+        return client;
+    }
+    installKey(param) {
+        const buffer = param.key || (param.filePath && (0, fs_extra_1.readFileSync)((0, path_1.resolve)(param.filePath)));
+        if (!buffer) {
+            throw new Error(`Invalid Key: ${JSON.stringify(param)}`);
+        }
+        (0, fs_extra_1.writeFileSync)((0, path_1.join)(this.keyDir, 'service-account-key.json'), buffer, { encoding: 'utf-8' });
+    }
+}
+var GoogleAuthType;
+(function (GoogleAuthType) {
+    GoogleAuthType[GoogleAuthType["OAuth2"] = 0] = "OAuth2";
+    GoogleAuthType[GoogleAuthType["GoogleAuth"] = 1] = "GoogleAuth";
+})(GoogleAuthType || (exports.GoogleAuthType = GoogleAuthType = {}));
+class GoogleAuthorizer {
+    constructor(type, org, rootDir) {
+        this.type = type;
+        this.oAuth2 = new OAuth2ClientHandler(org, rootDir);
+        this.googleAuth = new GoogleAuthClientHandler(org, rootDir);
+    }
+    createClient() {
+        switch (this.type) {
+            case GoogleAuthType.OAuth2:
+                return this.oAuth2.createClient();
+            case GoogleAuthType.GoogleAuth:
+                return this.googleAuth.createClient();
+        }
+        throw new Error(`Unhandled Auth Type ${this.type}`);
     }
 }
 exports.GoogleAuthorizer = GoogleAuthorizer;

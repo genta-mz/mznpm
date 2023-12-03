@@ -40,7 +40,7 @@ class GoogleDriveAccessor {
     upload(param) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.drive('v3').files.create({
-                auth: this.context.authorizer.authorize(),
+                auth: this.context.authorizer.createClient(),
                 requestBody: {
                     parents: param.folderId ? [param.folderId] : undefined,
                     name: (0, path_1.basename)(param.filePath),
@@ -57,7 +57,7 @@ class GoogleDriveAccessor {
             let folderId = param.folderId;
             for (const d of dirs) {
                 const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.drive('v3').files.create({
-                    auth: this.context.authorizer.authorize(),
+                    auth: this.context.authorizer.createClient(),
                     requestBody: {
                         parents: folderId ? [folderId] : undefined,
                         name: d,
@@ -74,7 +74,9 @@ class GoogleDriveAccessor {
     }
     list(param) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.drive('v3').files.list({ auth: this.context.authorizer.authorize(), q: `'${param.folderId}' in parents` }));
+            const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google
+                .drive('v3')
+                .files.list({ auth: this.context.authorizer.createClient(), q: `'${param.folderId}' in parents` }));
             return (response.data.files || []).map((f) => new DriveItem(f));
         });
     }
