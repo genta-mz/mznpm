@@ -80,7 +80,7 @@ class GoogleSpreadsheetAccessor {
         return __awaiter(this, void 0, void 0, function* () {
             const ranges = params.ranges || [params.range || ''];
             const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.values.batchGet({
-                auth: this.context.authorizer.authorize(),
+                auth: this.context.authorizer.createClient(),
                 spreadsheetId: params.spreadsheetId,
                 ranges: ranges,
             }), (e) => {
@@ -106,7 +106,7 @@ class GoogleSpreadsheetAccessor {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.get({
-                auth: this.context.authorizer.authorize(),
+                auth: this.context.authorizer.createClient(),
                 spreadsheetId: params.spreadsheetId,
                 ranges: params.ranges,
                 includeGridData: true,
@@ -214,7 +214,7 @@ class GoogleSpreadsheetAccessor {
                 }
             })));
             yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.batchUpdate({
-                auth: this.context.authorizer.authorize(),
+                auth: this.context.authorizer.createClient(),
                 spreadsheetId: params.spreadsheetId,
                 requestBody: { requests: requests },
             }), (e) => {
@@ -249,7 +249,7 @@ class GoogleSpreadsheetAccessor {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.spreadsheetContext.sheetIdMap.has(params.spreadsheetId)) {
                 const response = yield this.context.apiRunner.withRetry(() => googleapis_1.google.sheets('v4').spreadsheets.get({
-                    auth: this.context.authorizer.authorize(),
+                    auth: this.context.authorizer.createClient(),
                     spreadsheetId: params.spreadsheetId,
                     includeGridData: false,
                 }), (e) => {

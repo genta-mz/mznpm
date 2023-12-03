@@ -1,19 +1,24 @@
-import { mkdirpSync, readJSONSync, writeJSONSync } from 'fs-extra';
-import { google } from 'googleapis';
+import { mkdirpSync, readFileSync, readJSONSync, writeFileSync, writeJSONSync } from 'fs-extra';
+import { google, Auth } from 'googleapis';
 import { createServer } from 'http';
 import { join, resolve } from 'path';
 import { URL } from 'url';
 
 const TOKEN_DIR_NAME = '.mznode';
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'];
 
-export class GoogleAuthorizer {
+interface IAuthClient {
+  createClient(): Auth.OAuth2Client | Auth.GoogleAuth;
+}
+
+export class OAuth2ClientHandler {
   private readonly tokenDir: string;
 
   constructor(org: string, rootDir: string) {
     this.tokenDir = join(rootDir, TOKEN_DIR_NAME, org);
   }
 
-  public authorize() {
+  public createClient() {
     const clientSecret = readJSONSync(join(this.tokenDir, 'client-secret.json'), { encoding: 'utf-8' });
     const tokens = readJSONSync(join(this.tokenDir, 'tokens.json'), { encoding: 'utf-8' });
 
@@ -28,7 +33,7 @@ export class GoogleAuthorizer {
     return client;
   }
 
-  public saveToken(clientSecretPath: string, onAuthorize: (url: string) => void) {
+  public getToken(clientSecretPath: string, onAuthorize: (url: string) => void) {
     const clientSecret = readJSONSync(resolve(clientSecretPath));
     const client = new google.auth.OAuth2(
       `${clientSecret.installed.client_id}`,
@@ -38,7 +43,7 @@ export class GoogleAuthorizer {
 
     const authUrl = client.generateAuthUrl({
       access_type: 'offline',
-      scope: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
+      scope: SCOPES,
     });
 
     onAuthorize(authUrl);
@@ -79,5 +84,62 @@ export class GoogleAuthorizer {
     });
 
     server.listen(3000);
+  }
+}
+
+export type GoogleAuthKeyInfo = { filePath?: string; key?: string };
+
+class GoogleAuthClientHandler {
+  private readonly keyDir: string;
+
+  constructor(org: string, rootDir: string) {
+    this.keyDir = join(rootDir, TOKEN_DIR_NAME, org);
+  }
+
+  public createClient() {
+    const client = new Auth.GoogleAuth({
+      keyFile: join(this.keyDir, 'service-account-key.json'),
+      scopes: SCOPES,
+    });
+
+    return client;
+  }
+
+  public installKey(param: GoogleAuthKeyInfo) {
+    const buffer = param.key || (param.filePath && readFileSync(resolve(param.filePath)));
+    if (!buffer) {
+      throw new Error(`Invalid Key: ${JSON.stringify(param)}`);
+    }
+
+    writeFileSync(join(this.keyDir, 'service-account-key.json'), buffer, { encoding: 'utf-8' });
+  }
+}
+
+export enum GoogleAuthType {
+  OAuth2,
+  GoogleAuth,
+}
+
+export class GoogleAuthorizer implements IAuthClient {
+  public readonly oAuth2: OAuth2ClientHandler;
+  public readonly googleAuth: GoogleAuthClientHandler;
+
+  private readonly type: GoogleAuthType;
+
+  constructor(type: GoogleAuthType, org: string, rootDir: string) {
+    this.type = type;
+    this.oAuth2 = new OAuth2ClientHandler(org, rootDir);
+    this.googleAuth = new GoogleAuthClientHandler(org, rootDir);
+  }
+
+  public createClient() {
+    switch (this.type) {
+      case GoogleAuthType.OAuth2:
+        return this.oAuth2.createClient();
+      case GoogleAuthType.GoogleAuth:
+        return this.googleAuth.createClient();
+    }
+
+    throw new Error(`Unhandled Auth Type ${this.type}`);
   }
 }

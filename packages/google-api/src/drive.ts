@@ -41,7 +41,7 @@ export class GoogleDriveAccessor {
   public async upload(param: { folderId?: string; filePath: string; mimeType: string }) {
     const response = await this.context.apiRunner.withRetry(() =>
       google.drive('v3').files.create({
-        auth: this.context.authorizer.authorize(),
+        auth: this.context.authorizer.createClient(),
         requestBody: {
           parents: param.folderId ? [param.folderId] : undefined,
           name: basename(param.filePath),
@@ -61,7 +61,7 @@ export class GoogleDriveAccessor {
     for (const d of dirs) {
       const response = await this.context.apiRunner.withRetry(() =>
         google.drive('v3').files.create({
-          auth: this.context.authorizer.authorize(),
+          auth: this.context.authorizer.createClient(),
           requestBody: {
             parents: folderId ? [folderId] : undefined,
             name: d,
@@ -81,7 +81,9 @@ export class GoogleDriveAccessor {
 
   public async list(param: { folderId?: string }) {
     const response = await this.context.apiRunner.withRetry(() =>
-      google.drive('v3').files.list({ auth: this.context.authorizer.authorize(), q: `'${param.folderId}' in parents` })
+      google
+        .drive('v3')
+        .files.list({ auth: this.context.authorizer.createClient(), q: `'${param.folderId}' in parents` })
     );
 
     return (response.data.files || []).map((f) => new DriveItem(f));

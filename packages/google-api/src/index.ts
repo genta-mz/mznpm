@@ -1,4 +1,4 @@
-import { GoogleAuthorizer } from './authorizer';
+import { GoogleAuthKeyInfo, GoogleAuthType, GoogleAuthorizer } from './authorizer';
 import { GoogleDriveAccessor } from './drive';
 import { APIRunner, ErrorConfig } from './internal/api-runner';
 import { GoogleAPIContext } from './internal/context';
@@ -10,8 +10,9 @@ export class GoogleAPI {
 
   private readonly authorizer: GoogleAuthorizer;
 
-  constructor(org: string, options?: { rootDir?: string; errorConfig?: ErrorConfig }) {
+  constructor(org: string, options?: { rootDir?: string; errorConfig?: ErrorConfig; authType?: GoogleAuthType }) {
     this.authorizer = new GoogleAuthorizer(
+      options?.authType || GoogleAuthType.GoogleAuth,
       org,
       options?.rootDir || `${process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME']}`
     );
@@ -26,6 +27,10 @@ export class GoogleAPI {
   }
 
   public installOAuth2Token(clientSecretPath: string, onAuthorize: (url: string) => void) {
-    this.authorizer.saveToken(clientSecretPath, onAuthorize);
+    this.authorizer.oAuth2.getToken(clientSecretPath, onAuthorize);
+  }
+
+  public installGoogleAuthKey(param: GoogleAuthKeyInfo) {
+    this.authorizer.googleAuth.installKey(param);
   }
 }
